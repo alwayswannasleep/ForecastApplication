@@ -1,0 +1,34 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.vladk.forecastapplication">
+
+    <application android:allowBackup="true"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity android:name=".activities.WelcomeActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".activities.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.SEARCH"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.app.searchable"
+                android:value=".activities.MainActivity"
+                android:resource="@xml/searchable"/>
+        </activity>
+        
+        <provider
+            android:authorities=".storage.SuggestionProvider"
+            android:name="com.vladk.forecastapplication.storage.SuggestionProvider"
+            android:exported="false" />
+
+    </application>
+
+</manifest>

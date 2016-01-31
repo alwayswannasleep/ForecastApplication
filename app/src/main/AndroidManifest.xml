@@ -14,7 +14,8 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".activities.MainActivity">
+        <activity android:name=".activities.MainActivity"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH"/>
             </intent-filter>
@@ -25,7 +26,7 @@
         </activity>
         
         <provider
-            android:authorities=".storage.SuggestionProvider"
+            android:authorities="com.vladk.forecastapplication.storage.SuggestionProvider"
             android:name="com.vladk.forecastapplication.storage.SuggestionProvider"
             android:exported="false" />
 

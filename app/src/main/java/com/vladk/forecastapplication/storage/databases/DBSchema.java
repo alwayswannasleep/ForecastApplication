@@ -1,5 +1,8 @@
 package com.vladk.forecastapplication.storage.databases;
 
+import android.app.SearchManager;
+import android.provider.BaseColumns;
+
 /**
  *  Constants for ForecastDatabaseHelper class.
  *
@@ -15,8 +18,8 @@ public class DBSchema {
 
     public static class Cities {
         public static final String TABLE_NAME = "cities";
-        public static final String ID = "id";
-        public static final String NAME = "name";
+        public static final String ID = BaseColumns._ID;
+        public static final String NAME = SearchManager.SUGGEST_COLUMN_TEXT_1;
         public static final String COUNTRY = "country";
     }
 
@@ -42,5 +45,4 @@ public class DBSchema {
         public static final String MEANING = "meaning";
         public static final String ICON_REF = "icon_ref";
     }
-
 }

@@ -2,26 +2,26 @@ package com.vladk.forecastapplication.storage;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.util.Log;
 
-import com.google.gson.Gson;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonToken;
-import com.vladk.forecastapplication.R;
+import com.vladk.forecastapplication.Callback;
+import com.vladk.forecastapplication.storage.databases.DBSchema;
 import com.vladk.forecastapplication.storage.databases.ForecastDatabaseHelper;
-import com.vladk.forecastapplication.storage.models.City;
 import com.vladk.forecastapplication.storage.repositories.CityRepository;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.util.Locale;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /**
  * Main Storage for access to general data.
  * Singleton. Before usage do registration.
- * <p/>
+ * <p>
  * ------------------------------------------------------
  *
  * @author Vlad Kraevskiy
@@ -30,11 +30,12 @@ public class Storage {
     private Context mContext;
     private SQLiteDatabase mDatabase;
     private CityRepository mCityRepository;
+    private ForecastDatabaseHelper mHelper;
+
+    private final int BUFFER_SIZE = 32000;
 
     private Executor mExecutor = Executors.newFixedThreadPool(
             Runtime.getRuntime().availableProcessors() - 1);
-
-    private int mRegisteredCount = 0;
 
     private static volatile Storage mInstance;
 
@@ -53,49 +54,61 @@ public class Storage {
         return localInstance;
     }
 
-    public void firstInit() {
-        init();
+    public void init(Callback callback) {
+        boolean dbExist = databaseExist();
 
+        openDataBase();
+        mCityRepository = new CityRepository(mDatabase);
+
+        if (dbExist) {
+            callback.onResult();
+        } else {
+            copyDatabase(callback);
+        }
+    }
+
+    private void copyDatabase(final Callback callback) {
         mExecutor.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Gson gson = new Gson();
+                    InputStream inputStream = mContext.getAssets().open(DBSchema.DB_NAME + ".db");
+                    OutputStream outputStream = new FileOutputStream(ForecastDatabaseHelper.DB_PATH);
 
-                    InputStream in = mContext.getResources().openRawResource(R.raw.city_list);
-                    JsonReader jsonReader = new JsonReader(new InputStreamReader(in, "UTF-8"));
+                    byte[] buffer = new byte[BUFFER_SIZE];
 
-                    jsonReader.setLenient(true);
-
-                    while (jsonReader.peek() != JsonToken.END_DOCUMENT) {
-                        City city = gson.fromJson(jsonReader, City.class);
-                        mCityRepository.insert(city);
+                    while (inputStream.read(buffer) > 0) {
+                        outputStream.write(buffer);
                     }
 
-                    jsonReader.close();
-                    Log.d(Storage.class.getSimpleName(), "Load finished");
+                    inputStream.close();
+                    outputStream.flush();
+                    outputStream.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+
+                Log.d(Storage.class.getSimpleName(), "Load finished");
+
+                callback.onResult();
             }
         });
     }
 
-    public void init() {
-        openDataBase();
-        mCityRepository = new CityRepository(mDatabase);
-    }
+    private boolean databaseExist() {
+        boolean dbExist;
 
-    public void register() {
-        mRegisteredCount++;
-    }
+        try {
+            SQLiteDatabase database = SQLiteDatabase
+                    .openDatabase(ForecastDatabaseHelper.DB_PATH, null, SQLiteDatabase.OPEN_READWRITE);
 
-    public void unRegister() {
-        mRegisteredCount--;
-
-        if (mRegisteredCount == 0) {
-            closeDataBase();
+            database.close();
+            dbExist = true;
+        } catch (SQLiteException e) {
+            dbExist = false;
         }
+
+        return dbExist;
     }
 
     private Storage(Context context) {
@@ -103,12 +116,8 @@ public class Storage {
     }
 
     private void openDataBase() {
-        ForecastDatabaseHelper helper = new ForecastDatabaseHelper(mContext);
-        mDatabase = helper.getWritableDatabase();
+        mHelper = new ForecastDatabaseHelper(mContext);
+        mDatabase = mHelper.getWritableDatabase();
+        mDatabase.setLocale(Locale.ENGLISH);
     }
-
-    private void closeDataBase() {
-        mDatabase.close();
-    }
-
 }

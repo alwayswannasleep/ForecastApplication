@@ -1,20 +1,32 @@
 package com.vladk.forecastapplication.storage.databases;
 
+import android.app.SearchManager;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteQueryBuilder;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.vladk.forecastapplication.storage.databases.DBSchema.*;
 
 /**
  * Database helper for all databases in project.
  * Implemented onCreate and onUpgrade methods.
- *
+ * <p>
  * ------------------------------------------------------
  *
  * @author Vlad Kraevskiy
  */
 public class ForecastDatabaseHelper extends SQLiteOpenHelper {
+
+    public static final String DB_PATH = "/data/data/com.vladk.forecastapplication/databases/"
+            + DBSchema.DB_NAME;
+
+    private static final Map<String, String> mColumnMap = buildColumnMap();
 
     public ForecastDatabaseHelper(Context context) {
         super(context, DBSchema.DB_NAME, null, DBSchema.VERSION);
@@ -22,39 +34,7 @@ public class ForecastDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        ExecBuilder builder = new ExecBuilder(Cities.TABLE_NAME);
-        builder.addValue(Cities.ID, ExecBuilder.Types.Integer)
-                .addValue(Cities.NAME, ExecBuilder.Types.Text)
-                .addValue(Cities.COUNTRY, ExecBuilder.Types.Text)
-                .setPrimaryKey(Cities.ID);
 
-        db.execSQL(builder.build());
-
-        builder = new ExecBuilder(WeatherCondition.TABLE_NAME);
-        builder.addValue(WeatherCondition.ID, ExecBuilder.Types.Integer)
-                .addValue(WeatherCondition.MEANING, ExecBuilder.Types.Text)
-                .addValue(WeatherCondition.ICON_REF, ExecBuilder.Types.Text)
-                .setPrimaryKey(WeatherCondition.ID);
-
-        db.execSQL(builder.build());
-
-        builder = new ExecBuilder(Forecast.TABLE_NAME);
-        builder.addValue(Forecast.CITY_ID, ExecBuilder.Types.Text)
-                .addValue(Forecast.TEMP, ExecBuilder.Types.Real)
-                .addValue(Forecast.TEMP_MIN, ExecBuilder.Types.Real)
-                .addValue(Forecast.TEMP_MAX, ExecBuilder.Types.Real)
-                .addValue(Forecast.PRESSURE, ExecBuilder.Types.Real)
-                .addValue(Forecast.HUMIDITY, ExecBuilder.Types.Real)
-                .addValue(Forecast.CONDITION_ID, ExecBuilder.Types.Integer)
-                .addValue(Forecast.CLOUDINESS, ExecBuilder.Types.Real)
-                .addValue(Forecast.WIND_SPEED, ExecBuilder.Types.Real)
-                .addValue(Forecast.RAIN_COUNT, ExecBuilder.Types.Real)
-                .addValue(Forecast.SNOW_COUNT, ExecBuilder.Types.Real)
-                .addValue(Forecast.FORECAST_DATE, ExecBuilder.Types.Text)
-                .addForeignKey(Forecast.CITY_ID, Cities.TABLE_NAME, Cities.ID)
-                .addForeignKey(Forecast.CONDITION_ID, WeatherCondition.TABLE_NAME, WeatherCondition.ID);
-
-        db.execSQL(builder.build());
     }
 
     @Override
@@ -64,5 +44,33 @@ public class ForecastDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(new ExecBuilder(WeatherCondition.TABLE_NAME).dropTableString());
 
         onCreate(db);
+    }
+
+    public Cursor query(String tableName, String selection, String[] selectionArgs, String sortOrder) {
+        SQLiteQueryBuilder builder = new SQLiteQueryBuilder();
+        builder.setTables(tableName);
+        builder.setProjectionMap(mColumnMap);
+
+        Cursor cursor = builder
+                .query(getReadableDatabase(), null, selection, selectionArgs, null, null, sortOrder);
+
+        if (cursor == null) {
+            return null;
+        } else if (!cursor.moveToFirst()) {
+            cursor.close();
+            return null;
+        }
+
+        return cursor;
+    }
+
+    private static Map<String, String> buildColumnMap() {
+        HashMap<String, String> map = new HashMap<>();
+        map.put(Cities.ID, Cities.ID);
+        map.put(Cities.NAME, Cities.NAME);
+        map.put(SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID, Cities.ID + " AS " +
+                SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID);
+
+        return map;
     }
 }
